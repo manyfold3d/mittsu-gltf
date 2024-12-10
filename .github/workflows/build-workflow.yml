@@ -8,6 +8,15 @@ on:
       - main
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - name: Lint Ruby code
+        run: bundle exec rake rubocop
   linux:
     name: Linux
     runs-on: ubuntu-latest
