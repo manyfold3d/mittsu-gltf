@@ -1,12 +1,13 @@
-name: Push gem to RubyGems.org
+name: Release
+
 on:
   push:
-    branches: [ "main" ]
     tags:
       - v*
 
 jobs:
-  release:
+  push:
+    name: Push gem to RubyGems.org
     runs-on: ubuntu-latest
 
     permissions:
