@@ -1,3 +1,4 @@
+# rubocop:todo RSpec/InstanceVariable
 require "tmpdir"
 
 RSpec.describe Mittsu::GLTFExporter do
@@ -76,3 +77,5 @@ RSpec.describe Mittsu::GLTFExporter do
     end
   end
 end
+
+# rubocop:enable RSpec/InstanceVariable
