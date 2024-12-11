@@ -17,6 +17,11 @@ module Mittsu
           json.scenes [{
             nodes: []
           }]
+          json.nodes []
+          json.meshes []
+          json.buffers []
+          json.bufferViews []
+          json.accessors []
         end.target!
       )
     end

@@ -45,6 +45,26 @@ RSpec.describe Mittsu::GLTFExporter do
       it "has an array of scenes" do
         expect(json.dig("scenes")).to eq [{"nodes" => []}]
       end
+
+      it "has an array of nodes" do
+        expect(json.dig("nodes")).to be_a Array
+      end
+
+      it "has an array of meshes" do
+        expect(json.dig("meshes")).to be_a Array
+      end
+
+      it "has an array of buffers" do
+        expect(json.dig("buffers")).to be_a Array
+      end
+
+      it "has an array of bufferViews" do
+        expect(json.dig("bufferViews")).to be_a Array
+      end
+
+      it "has an array of accessors" do
+        expect(json.dig("accessors")).to be_a Array
+      end
     end
   end
 
