@@ -37,6 +37,14 @@ RSpec.describe Mittsu::GLTFExporter do
       it "has a generator string" do
         expect(json.dig("asset", "generator")).to eq "Mittsu-GLTF"
       end
+
+      it "has a default scene" do
+        expect(json.dig("scene")).to eq 0
+      end
+
+      it "has an array of scenes" do
+        expect(json.dig("scenes")).to eq [{"nodes" => []}]
+      end
     end
   end
 

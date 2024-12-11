@@ -13,6 +13,10 @@ module Mittsu
             json.generator "Mittsu-GLTF"
             json.version "2.0"
           end
+          json.scene 0
+          json.scenes [{
+            nodes: []
+          }]
         end.target!
       )
     end
