@@ -26,6 +26,7 @@ module Mittsu
     ].freeze
 
     def initialize(options = {})
+      @node_indexes = []
       @nodes = []
       @buffers = []
       @meshes = []
@@ -35,7 +36,7 @@ module Mittsu
 
     def export(object, filename)
       object.traverse do |obj|
-        add_mesh(obj) if obj.is_a? Mittsu::Mesh
+        @node_indexes << add_mesh(obj) if obj.is_a? Mittsu::Mesh
       end
       File.write(
         filename,
@@ -46,7 +47,7 @@ module Mittsu
           end
           json.scene 0
           json.scenes [{
-            nodes: []
+            nodes: @node_indexes
           }]
           json.nodes { json.array! @nodes }
           json.meshes { json.array! @meshes }
