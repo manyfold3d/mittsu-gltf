@@ -26,6 +26,7 @@ module Mittsu
     ].freeze
 
     def initialize(options = {})
+      @nodes = []
       @buffers = []
       @meshes = []
       @buffer_views = []
@@ -34,9 +35,7 @@ module Mittsu
 
     def export(object, filename)
       object.traverse do |obj|
-        if obj.is_a? Mittsu::Mesh
-          add_mesh(obj)
-        end
+        add_mesh(obj) if obj.is_a? Mittsu::Mesh
       end
       File.write(
         filename,
@@ -49,7 +48,7 @@ module Mittsu
           json.scenes [{
             nodes: []
           }]
-          json.nodes []
+          json.nodes { json.array! @nodes }
           json.meshes { json.array! @meshes }
           json.buffers { json.array! @buffers }
           json.bufferViews { json.array! @buffer_views }
@@ -100,7 +99,7 @@ module Mittsu
         byteLength: data.length
       }
       # Add mesh
-      index = @meshes.count
+      mesh_index = @meshes.count
       @meshes << {
         "primitives" => [
           {
@@ -110,6 +109,11 @@ module Mittsu
             "indices" => face_accessor_index
           }
         ]
+      }
+      # Add node
+      index = @nodes.count
+      @nodes << {
+        mesh: mesh_index
       }
       index
     end
