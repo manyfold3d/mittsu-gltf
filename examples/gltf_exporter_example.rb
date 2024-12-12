@@ -6,3 +6,5 @@ object = loader.load(File.expand_path("./mittsu.obj", File.dirname(__FILE__)))
 
 exporter = Mittsu::GLTFExporter.new
 exporter.export(object, File.expand_path("./mittsu-export.gltf", File.dirname(__FILE__)))
+
+exporter.export(object, File.expand_path("./mittsu-export.glb", File.dirname(__FILE__)), mode: :binary)
