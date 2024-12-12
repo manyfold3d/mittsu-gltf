@@ -41,6 +41,7 @@ module Mittsu
     end
 
     def export(object, filename, mode: :ascii)
+      initialize
       object.traverse do |obj|
         @node_indexes << add_mesh(obj, mode: mode) if obj.is_a? Mittsu::Mesh
       end
