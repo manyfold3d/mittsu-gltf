@@ -37,11 +37,12 @@ module Mittsu
       @meshes = []
       @buffer_views = []
       @accessors = []
+      @binary_buffer = nil
     end
 
-    def export(object, filename)
+    def export(object, filename, mode: :ascii)
       object.traverse do |obj|
-        @node_indexes << add_mesh(obj) if obj.is_a? Mittsu::Mesh
+        @node_indexes << add_mesh(obj, mode: mode) if obj.is_a? Mittsu::Mesh
       end
       File.write(
         filename,
@@ -61,6 +62,9 @@ module Mittsu
           json.accessors { json.array! @accessors }
         end.target!
       )
+      if @binary_buffer
+        File.write(filename, @binary_buffer, mode: "a")
+      end
     end
 
     # Parse is here for consistency with THREE.js's weird naming of exporter methods
@@ -68,7 +72,7 @@ module Mittsu
 
     private
 
-    def add_mesh(mesh)
+    def add_mesh(mesh, mode:)
       # Pack faces into an array
       pack_string = (mesh.geometry.faces.count > (2**16)) ? "L<*" : "S<*"
       faces = mesh.geometry.faces.map { |x| [x.a, x.b, x.c] }
@@ -110,10 +114,13 @@ module Mittsu
         max: mesh.geometry.bounding_box.max.elements
       )
       # Encode and store in buffers
-      @buffers << {
+      @buffers << ((mode == :ascii) ? {
         uri: "data:application/octet-stream;base64," + Base64.strict_encode64(data),
         byteLength: data.length
-      }
+      } : {
+        byteLength: data.length
+      })
+      @binary_buffer = data if mode == :binary
       # Add mesh
       mesh_index = @meshes.count
       @meshes << {
@@ -136,7 +143,7 @@ module Mittsu
 
     def add_buffer_view(buffer:, offset:, length:, target: nil)
       # Check args
-      raise ArgumentError.new("invalid GPU buffer target: #{target}") unless target.nil? || GPU_BUFFER_TYPES.keys.include?(target)
+      raise ArgumentError.new("invalid GPU buffer target: #{target}") unless target.nil? || GPU_BUFFER_TYPES.key?(target)
       index = @buffer_views.count
       @buffer_views << {
         buffer: buffer,

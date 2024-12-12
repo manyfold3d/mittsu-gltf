@@ -194,6 +194,95 @@ RSpec.describe Mittsu::GLTFExporter do
     end
   end
 
+  context "when exporting an ASCII file" do
+    around do |example|
+      Dir.mktmpdir do |dir|
+        @filename = File.join(dir, "test.gltf")
+        exporter.export(box, @filename, mode: :ascii)
+        @json = JSON.parse(File.read(@filename))
+        example.call
+      end
+    end
+
+    it "has a data URI in the buffer" do
+      expect(@json.dig("buffers", 0, "uri")).to start_with("data:")
+    end
+
+    it "has buffer length" do
+      expect(@json.dig("buffers", 0, "byteLength")).to eq 168
+    end
+  end
+
+  context "when exporting a binary file" do
+    around do |example|
+      Dir.mktmpdir do |dir|
+        @filename = File.join("test.glb")
+        exporter.export(box, @filename, mode: :binary)
+        example.call
+      end
+    end
+
+    let(:file) { File.binread(@filename) }
+
+    context "when reading header" do
+      let(:header) { file.slice(0, 12).unpack("L<*") }
+
+      it "starts with magic number" do
+        expect(header[0]).to eq 0x46546C67 # "glTF" as an int
+      end
+
+      it "specifies GLB container version 2" do
+        expect(header[1]).to eq 2
+      end
+
+      it "specifies complete file length" do
+        expect(header[2]).to eq File.size(@filename)
+      end
+    end
+
+    context "when reading chunk 0" do
+      let(:header) { file.slice(12, 8).unpack("L<*") }
+      let(:json) { JSON.parse(file.slice(20, header[0])) }
+
+      it "specifies correct padded chunk length" do
+        expect(header[0]).to eq 580
+      end
+
+      it "specifies that this is a JSON chunk" do
+        expect(header[1]).to eq 0x4E4F534A # "JSON" as an int
+      end
+
+      it "has no URI in the buffer" do
+        expect(json.dig("buffers", 0)).not_to have_key("uri")
+      end
+
+      it "has same buffer length as chunk 1 length" do
+        expect(json.dig("buffers", 0, "byteLength")).to eq 168
+      end
+    end
+
+    context "when reading chunk 1" do
+      let(:header) { file.slice(600, 8).unpack("L<*") }
+      let(:chunk_data) { file.slice(608, 172) }
+
+      it "specifies correct chunk length" do
+        expect(header[0]).to eq 168
+      end
+
+      it "specifies that this is a BIN chunk" do
+        expect(header[1]).to eq 0x004E4942 # "BIN" as an int
+      end
+
+      it "includes binary mesh data" do
+        expect(chunk_data.unpack("S<S<S<")).to eq [
+          box.geometry.faces.first.a,
+          box.geometry.faces.first.b,
+          box.geometry.faces.first.c
+        ]
+      end
+    end
+  end
+
   it "provides a #parse alias for export, for API-compatibility with THREE.js" do
     Dir.mktmpdir do |dir|
       filename = File.join(dir, "test.gltf")
