@@ -27,7 +27,7 @@ module Mittsu
 
     def initialize(options = {})
       @buffers = []
-      @meshes = {}
+      @meshes = []
       @buffer_views = []
       @accessors = []
     end
@@ -35,8 +35,7 @@ module Mittsu
     def export(object, filename)
       object.traverse do |obj|
         if obj.is_a? Mittsu::Mesh
-          @meshes[obj.uuid] ||= {}
-          @meshes[obj.uuid][:buffer_index] = add_buffer(obj)
+          add_mesh(obj)
         end
       end
       File.write(
@@ -51,6 +50,7 @@ module Mittsu
             nodes: []
           }]
           json.nodes []
+          json.meshes { json.array! @meshes }
           json.buffers { json.array! @buffers }
           json.bufferViews { json.array! @buffer_views }
           json.accessors { json.array! @accessors }
@@ -63,15 +63,14 @@ module Mittsu
 
     private
 
-    def add_buffer(mesh)
-      index = @buffers.count
+    def add_mesh(mesh)
       # Pack faces into an array
       pack_string = (mesh.geometry.faces.count > (2**16)) ? "L<*" : "S<*"
       faces = mesh.geometry.faces.map { |x| [x.a, x.b, x.c] }
       data = faces.flatten.pack(pack_string)
       # Add bufferView and accessor for faces
       face_accessor_index = add_accessor(
-        buffer_view: add_buffer_view(buffer: index, offset: 0, length: data.length),
+        buffer_view: add_buffer_view(buffer: @buffers.count, offset: 0, length: data.length),
         component_type: (mesh.geometry.faces.count > (2**16)) ? COMPONENT_TYPES[:unsigned_int] : COMPONENT_TYPES[:unsigned_short],
         count: mesh.geometry.faces.count * 3,
         type: "SCALAR",
@@ -88,7 +87,7 @@ module Mittsu
       # Add bufferView and accessor for vertices
       mesh.geometry.compute_bounding_box
       vertex_accessor_index = add_accessor(
-        buffer_view: add_buffer_view(buffer: index, offset: offset, length: data.length - offset),
+        buffer_view: add_buffer_view(buffer: @buffers.count, offset: offset, length: data.length - offset),
         component_type: COMPONENT_TYPES[:float],
         count: mesh.geometry.vertices.count,
         type: "VEC3",
@@ -99,6 +98,18 @@ module Mittsu
       @buffers << {
         uri: "data:application/octet-stream;base64," + Base64.encode64(data).strip,
         byteLength: data.length
+      }
+      # Add mesh
+      index = @meshes.count
+      @meshes << {
+        "primitives" => [
+          {
+            "attributes" => {
+              "POSITION" => vertex_accessor_index
+            },
+            "indices" => face_accessor_index
+          }
+        ]
       }
       index
     end
