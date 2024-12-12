@@ -62,12 +62,18 @@ module Mittsu
       case mode
       when :ascii
         File.write(filename, json)
+      when :binary
+        File.open(filename, "wb") do |file|
+          size = 12 +
+            8 + json.length + padding_required(json, stride: 4) +
+            8 + @binary_buffer.length + padding_required(@binary_buffer, stride: 4)
+          file.write("glTF")
+          file.write([2, size].pack("L<*"))
+          write_chunk(file, :json, json)
+          write_chunk(file, :binary, @binary_buffer)
+        end
       else
         raise ArgumentError "Invalid output mode #{mode}"
-      end
-
-      if @binary_buffer
-        File.write(filename, @binary_buffer, mode: "a")
       end
     end
 
@@ -75,6 +81,21 @@ module Mittsu
     alias_method :parse, :export
 
     private
+
+    def write_chunk(file, type, data)
+      pad = padding_required(data, stride: 4)
+      file.write([data.length + pad].pack("L<*"))
+      case type
+      when :json
+        file.write("JSON")
+      when :binary
+        file.write("BIN\0")
+      else
+        raise ArgumentError.new("Invalid chunk type: #{type}")
+      end
+      file.write data
+      file.write(Array.new(pad, (type == :json) ? 32 : 0).pack("C*")) # Space characters for JSON, null otherwise
+    end
 
     def add_mesh(mesh, mode:)
       # Pack faces into an array
