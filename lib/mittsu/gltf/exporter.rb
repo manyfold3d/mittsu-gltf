@@ -111,7 +111,7 @@ module Mittsu
       )
       # Encode and store in buffers
       @buffers << {
-        uri: "data:application/octet-stream;base64," + Base64.encode64(data).strip,
+        uri: "data:application/octet-stream;base64," + Base64.strict_encode64(data),
         byteLength: data.length
       }
       # Add mesh
