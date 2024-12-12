@@ -96,7 +96,7 @@ module Mittsu
         max: mesh.geometry.vertices.count - 1
       )
       # Add padding to get to integer multiple of float size
-      padding = 4 - (data.length % 4)
+      padding = padding_required(data, stride: 4)
       data += Array.new(padding, 0).pack("C*")
       # Pack vertices in as floats
       offset = data.length
@@ -174,6 +174,10 @@ module Mittsu
         max: Array(max)
       }
       index
+    end
+
+    def padding_required(data, stride: 4)
+      (stride - (data.length % stride)) % stride
     end
   end
 end
