@@ -44,24 +44,28 @@ module Mittsu
       object.traverse do |obj|
         @node_indexes << add_mesh(obj, mode: mode) if obj.is_a? Mittsu::Mesh
       end
-      File.write(
-        filename,
-        Jbuilder.new do |json|
-          json.asset do
-            json.generator "Mittsu-GLTF"
-            json.version "2.0"
-          end
-          json.scene 0
-          json.scenes [{
-            nodes: @node_indexes
-          }]
-          json.nodes { json.array! @nodes }
-          json.meshes { json.array! @meshes }
-          json.buffers { json.array! @buffers }
-          json.bufferViews { json.array! @buffer_views }
-          json.accessors { json.array! @accessors }
-        end.target!
-      )
+      json = Jbuilder.new do |json|
+        json.asset do
+          json.generator "Mittsu-GLTF"
+          json.version "2.0"
+        end
+        json.scene 0
+        json.scenes [{
+          nodes: @node_indexes
+        }]
+        json.nodes { json.array! @nodes }
+        json.meshes { json.array! @meshes }
+        json.buffers { json.array! @buffers }
+        json.bufferViews { json.array! @buffer_views }
+        json.accessors { json.array! @accessors }
+      end.target!
+      case mode
+      when :ascii
+        File.write(filename, json)
+      else
+        raise ArgumentError "Invalid output mode #{mode}"
+      end
+
       if @binary_buffer
         File.write(filename, @binary_buffer, mode: "a")
       end
