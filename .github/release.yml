@@ -6,6 +6,7 @@ changelog:
     - title: ✨ New Features ✨
       labels:
         - feature
+        - enhancement
     - title: 🔒 Security 🔒
       labels:
         - security
