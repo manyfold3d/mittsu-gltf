@@ -20,6 +20,12 @@ exporter = Mittsu::GLTFExporter.new
 exporter.export(object, "output.gltf")
 ```
 
+You can also write binary files for simple single-mesh models:
+
+```
+exporter.export(object, "output.glb", mode: :binary)
+```
+
 ## About
 
 This code was originally written for [Manyfold](https://manyfold.app), supported by funding from [NLNet](https://nlnet.nl) and [NGI Zero](https://ngi.eu/ngi-projects/ngi-zero/).
