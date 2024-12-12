@@ -164,11 +164,23 @@ RSpec.describe Mittsu::GLTFExporter do
       })
     end
 
+    it "bufferView zero specifies ELEMENT_ARRAY_BUFFER gpu buffer type" do
+      expect(@json.dig("bufferViews", 0)).to include({
+        "target" => 34963
+      })
+    end
+
     it "bufferView one is 3 floating-point 3-vectors (3*3*4 = 36 bytes) in buffer zero after the face set" do
       expect(@json.dig("bufferViews", 1)).to include({
         "buffer" => 0,
         "byteOffset" => 8,
         "byteLength" => 36
+      })
+    end
+
+    it "bufferView one specifies ARRAY_BUFFER gpu buffer type" do
+      expect(@json.dig("bufferViews", 1)).to include({
+        "target" => 34962
       })
     end
 

@@ -15,6 +15,11 @@ module Mittsu
       float: 5126
     }.freeze
 
+    GPU_BUFFER_TYPES = {
+      array_buffer: 34962,
+      element_array_buffer: 34963
+    }
+
     ELEMENT_TYPES = [
       "SCALAR",
       "VEC2",
@@ -70,8 +75,13 @@ module Mittsu
       data = faces.flatten.pack(pack_string)
       # Add bufferView and accessor for faces
       face_accessor_index = add_accessor(
-        buffer_view: add_buffer_view(buffer: @buffers.count, offset: 0, length: data.length),
-        component_type: (mesh.geometry.faces.count > (2**16)) ? COMPONENT_TYPES[:unsigned_int] : COMPONENT_TYPES[:unsigned_short],
+        buffer_view: add_buffer_view(
+          buffer: @buffers.count,
+          offset: 0,
+          length: data.length,
+          target: :element_array_buffer
+        ),
+        component_type: (mesh.geometry.faces.count > (2**16)) ? :unsigned_int : :unsigned_short,
         count: mesh.geometry.faces.count * 3,
         type: "SCALAR",
         min: 0,
@@ -87,8 +97,13 @@ module Mittsu
       # Add bufferView and accessor for vertices
       mesh.geometry.compute_bounding_box
       vertex_accessor_index = add_accessor(
-        buffer_view: add_buffer_view(buffer: @buffers.count, offset: offset, length: data.length - offset),
-        component_type: COMPONENT_TYPES[:float],
+        buffer_view: add_buffer_view(
+          buffer: @buffers.count,
+          offset: offset,
+          length: data.length - offset,
+          target: :array_buffer
+        ),
+        component_type: :float,
         count: mesh.geometry.vertices.count,
         type: "VEC3",
         min: mesh.geometry.bounding_box.min.elements,
@@ -119,26 +134,29 @@ module Mittsu
       index
     end
 
-    def add_buffer_view(buffer:, offset:, length:)
+    def add_buffer_view(buffer:, offset:, length:, target: nil)
+      # Check args
+      raise ArgumentError.new("invalid GPU buffer target: #{target}") unless target.nil? || GPU_BUFFER_TYPES.keys.include?(target)
       index = @buffer_views.count
       @buffer_views << {
         buffer: buffer,
         byteOffset: offset,
-        byteLength: length
+        byteLength: length,
+        target: GPU_BUFFER_TYPES[target]
       }
       index
     end
 
     def add_accessor(buffer_view:, component_type:, count:, type:, min:, max:, offset: 0)
       # Check args
-      raise ArgumentError.new("invalid component type: #{component_type}") unless COMPONENT_TYPES.values.include?(component_type)
+      raise ArgumentError.new("invalid component type: #{component_type}") unless COMPONENT_TYPES.key?(component_type)
       raise ArgumentError.new("invalid element type: #{type}") unless ELEMENT_TYPES.include?(type)
       # Add data
       index = @accessors.count
       @accessors << {
         bufferView: buffer_view,
         byteOffset: offset,
-        componentType: component_type,
+        componentType: COMPONENT_TYPES[component_type],
         count: count,
         type: type,
         min: Array(min),
