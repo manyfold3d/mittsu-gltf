@@ -1,5 +1,6 @@
 require "jbuilder"
 require "base64"
+require_relative "progressive_exporter"
 
 module Mittsu
   class GLTFExporter
@@ -31,6 +32,10 @@ module Mittsu
     ].freeze
 
     def initialize(options = {})
+      # Include progressive export capability if mesh analysis gem is loaded
+      if defined?(Mittsu::MeshAnalysis::ProgressiveMesh)
+        self.class.include ProgressiveGLTFExporter
+      end
       @node_indexes = []
       @nodes = []
       @buffers = []
@@ -43,7 +48,11 @@ module Mittsu
     def export(object, filename, mode: :ascii)
       initialize
       object.traverse do |obj|
-        @node_indexes << add_mesh(obj, mode: mode) if obj.is_a? Mittsu::Mesh
+        if defined?(Mittsu::MeshAnalysis::ProgressiveMesh) && obj.is_a?(Mittsu::MeshAnalysis::ProgressiveMesh)
+          @node_indexes << add_progressive_mesh(obj)
+        elsif obj.is_a? Mittsu::Mesh
+          @node_indexes << add_mesh(obj, mode: mode)
+        end
       end
       json = Jbuilder.new do |json|
         json.asset do
