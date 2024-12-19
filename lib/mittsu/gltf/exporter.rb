@@ -194,7 +194,7 @@ module Mittsu
       index
     end
 
-    def add_buffer_view(buffer:, offset:, length:, target: nil)
+    def add_buffer_view(buffer:, offset:, length:, target: nil, byte_stride: nil)
       # Check args
       raise ArgumentError.new("invalid GPU buffer target: #{target}") unless target.nil? || GPU_BUFFER_TYPES.key?(target)
       index = @buffer_views.count
@@ -202,8 +202,9 @@ module Mittsu
         buffer: buffer,
         byteOffset: offset,
         byteLength: length,
+        byteStride: byte_stride,
         target: GPU_BUFFER_TYPES[target]
-      }
+      }.compact
       index
     end
 
