@@ -1,5 +1,6 @@
 require "jbuilder"
 require "base64"
+require_relative "progressive_exporter"
 
 module Mittsu
   class GLTFExporter
@@ -31,25 +32,37 @@ module Mittsu
     ].freeze
 
     def initialize(options = {})
+      # Include progressive export capability if mesh analysis gem is loaded
+      if defined?(Mittsu::MeshAnalysis::ProgressiveMesh)
+        self.class.include ProgressiveGLTFExporter
+      end
+      @extensions_used = []
+      @extensions_required = []
       @node_indexes = []
       @nodes = []
       @buffers = []
       @meshes = []
       @buffer_views = []
       @accessors = []
-      @binary_buffer = nil
+      @binary_buffer = ""
     end
 
     def export(object, filename, mode: :ascii)
       initialize
       object.traverse do |obj|
-        @node_indexes << add_mesh(obj, mode: mode) if obj.is_a? Mittsu::Mesh
+        if defined?(Mittsu::MeshAnalysis::ProgressiveMesh) && obj.is_a?(Mittsu::MeshAnalysis::ProgressiveMesh)
+          @node_indexes << add_progressive_mesh(obj)
+        elsif obj.is_a? Mittsu::Mesh
+          @node_indexes << add_mesh(obj, mode: mode)
+        end
       end
       json = Jbuilder.new do |json|
         json.asset do
           json.generator "Mittsu-GLTF"
           json.version "2.0"
         end
+        json.extensionsRequired { json.array! @extensions_required.uniq } unless @extensions_required.empty?
+        json.extensionsUsed { json.array! @extensions_used.uniq } unless @extensions_used.empty?
         json.scene 0
         json.scenes [{
           nodes: @node_indexes
@@ -98,55 +111,69 @@ module Mittsu
       file.write(Array.new(pad, (type == :json) ? 32 : 0).pack("C*")) # Space characters for JSON, null otherwise
     end
 
+    def pack_into_buffer(elements:, format:, pad: true)
+      offset = @binary_buffer.length
+      data = elements.flatten.pack(format)
+      length = data.length
+      if pad
+        padding = padding_required(data, stride: 4)
+        data += Array.new(padding, 0).pack("C*")
+      end
+      @binary_buffer += data
+      [length, offset]
+    end
+
     def add_mesh(mesh, mode:)
+      max_vertex_index = mesh.geometry.vertices.count - 1
+
       # Pack faces into an array
-      pack_string = (mesh.geometry.faces.count > (2**16)) ? "L<*" : "S<*"
-      faces = mesh.geometry.faces.map { |x| [x.a, x.b, x.c] }
-      data = faces.flatten.pack(pack_string)
+      face_buffer_length, face_buffer_offset = pack_into_buffer(
+        elements: mesh.geometry.faces.map { |x| [x.a, x.b, x.c] },
+        format: (max_vertex_index > (2**16)) ? "L<*" : "S<*"
+      )
+      # Pack vertices in as floats
+      vertex_buffer_length, vertex_buffer_offset = pack_into_buffer(
+        elements: mesh.geometry.vertices.map(&:elements),
+        format: "f*"
+      )
+
       # Add bufferView and accessor for faces
       face_accessor_index = add_accessor(
         buffer_view: add_buffer_view(
           buffer: @buffers.count,
-          offset: 0,
-          length: data.length,
+          offset: face_buffer_offset,
+          length: face_buffer_length,
           target: :element_array_buffer
         ),
-        component_type: (mesh.geometry.faces.count > (2**16)) ? :unsigned_int : :unsigned_short,
+        component_type: (max_vertex_index > (2**16)) ? :unsigned_int : :unsigned_short,
         count: mesh.geometry.faces.count * 3,
         type: "SCALAR",
         min: 0,
-        max: mesh.geometry.vertices.count - 1
+        max: max_vertex_index
       )
-      # Add padding to get to integer multiple of float size
-      padding = padding_required(data, stride: 4)
-      data += Array.new(padding, 0).pack("C*")
-      # Pack vertices in as floats
-      offset = data.length
-      vertices = mesh.geometry.vertices.map(&:elements)
-      data += vertices.flatten.pack("f*")
+
       # Add bufferView and accessor for vertices
       mesh.geometry.compute_bounding_box
       vertex_accessor_index = add_accessor(
         buffer_view: add_buffer_view(
           buffer: @buffers.count,
-          offset: offset,
-          length: data.length - offset,
+          offset: vertex_buffer_offset,
+          length: vertex_buffer_length,
           target: :array_buffer
         ),
         component_type: :float,
-        count: mesh.geometry.vertices.count,
+        count: max_vertex_index + 1,
         type: "VEC3",
-        min: mesh.geometry.bounding_box.min.elements,
-        max: mesh.geometry.bounding_box.max.elements
+        min: mesh.geometry.bounding_box.min.elements.map { |x| x.round 10 },
+        max: mesh.geometry.bounding_box.max.elements.map { |x| x.round 10 }
       )
       # Encode and store in buffers
       @buffers << ((mode == :ascii) ? {
-        uri: "data:application/octet-stream;base64," + Base64.strict_encode64(data),
-        byteLength: data.length
+        uri: "data:application/octet-stream;base64," + Base64.strict_encode64(@binary_buffer),
+        byteLength: @binary_buffer.length
       } : {
-        byteLength: data.length
+        byteLength: @binary_buffer.length
       })
-      @binary_buffer = data if mode == :binary
       # Add mesh
       mesh_index = @meshes.count
       @meshes << {
@@ -167,7 +194,7 @@ module Mittsu
       index
     end
 
-    def add_buffer_view(buffer:, offset:, length:, target: nil)
+    def add_buffer_view(buffer:, offset:, length:, target: nil, byte_stride: nil)
       # Check args
       raise ArgumentError.new("invalid GPU buffer target: #{target}") unless target.nil? || GPU_BUFFER_TYPES.key?(target)
       index = @buffer_views.count
@@ -175,8 +202,9 @@ module Mittsu
         buffer: buffer,
         byteOffset: offset,
         byteLength: length,
+        byteStride: byte_stride,
         target: GPU_BUFFER_TYPES[target]
-      }
+      }.compact
       index
     end
 

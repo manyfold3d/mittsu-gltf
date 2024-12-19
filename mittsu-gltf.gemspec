@@ -24,6 +24,9 @@ Gem::Specification.new do |spec|
   spec.add_dependency "mittsu", "~> 0.4"
   spec.add_dependency "jbuilder", "~> 2.13"
 
+  # Optional, but required in dev for test running
+  spec.add_development_dependency "mittsu-mesh_analysis"
+
   spec.add_development_dependency "rake", "~> 13.2"
   spec.add_development_dependency "rspec", "~> 3.13"
   spec.add_development_dependency "standard", "~> 1.41"

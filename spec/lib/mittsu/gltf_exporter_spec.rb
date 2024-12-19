@@ -185,7 +185,6 @@ RSpec.describe Mittsu::GLTFExporter do
     end
 
     it "buffer zero is 44 bytes long in total (6 + 2 padding + 36)" do
-      puts @json.inspect
       expect(@json.dig("buffers", 0, "byteLength")).to eq 44
     end
 
