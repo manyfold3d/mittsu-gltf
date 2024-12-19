@@ -36,6 +36,8 @@ module Mittsu
       if defined?(Mittsu::MeshAnalysis::ProgressiveMesh)
         self.class.include ProgressiveGLTFExporter
       end
+      @extensions_used = []
+      @extensions_required = []
       @node_indexes = []
       @nodes = []
       @buffers = []
@@ -59,6 +61,8 @@ module Mittsu
           json.generator "Mittsu-GLTF"
           json.version "2.0"
         end
+        json.extensionsRequired { json.array! @extensions_required.uniq } unless @extensions_required.empty?
+        json.extensionsUsed { json.array! @extensions_used.uniq } unless @extensions_used.empty?
         json.scene 0
         json.scenes [{
           nodes: @node_indexes
