@@ -20,4 +20,4 @@ progressive = Mittsu::MeshAnalysis::ProgressiveMesh.new(object.geometry, object.
 progressive.progressify ratio: 0.75
 
 exporter = Mittsu::GLTFExporter.new
-exporter.export(progressive, File.expand_path("./mittsu-export.glb", File.dirname(__FILE__)), mode: :binary)
+exporter.export(progressive, File.expand_path("./progressive-export.glb", File.dirname(__FILE__)), mode: :binary)
