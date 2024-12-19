@@ -114,7 +114,7 @@ RSpec.describe Mittsu::ProgressiveGLTFExporter do
 
   context "when reading chunk 1" do
     let(:header) { file.slice(1244, 8).unpack("L<*") }
-    let(:vsplit_data) { file.slice(2680, 2568) }
+    let(:vsplit_data) { file.slice(2680..-1) }
 
     it "specifies correct chunk length" do
       expect(header[0]).to eq 3996
