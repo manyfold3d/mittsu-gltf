@@ -25,6 +25,14 @@ RSpec.describe Mittsu::ProgressiveGLTFExporter do
   context "when reading chunk 0" do
     let(:header) { file.slice(12, 8).unpack("L<*") }
 
+    it "specifies correct padded chunk length" do
+      expect(header[0]).to eq 1168
+    end
+
+    it "specifies that this is a JSON chunk" do
+      expect(header[1]).to eq 0x4E4F534A # "JSON" as an int
+    end
+
     it "has same buffer length as chunk 1 length" do
       expect(json.dig("buffers", 0, "byteLength")).to eq 3996
     end
@@ -113,8 +121,8 @@ RSpec.describe Mittsu::ProgressiveGLTFExporter do
   end
 
   context "when reading chunk 1" do
-    let(:header) { file.slice(1244, 8).unpack("L<*") }
-    let(:vsplit_data) { file.slice(2680..-1) }
+    let(:header) { file.slice(1188, 8).unpack("L<*") }
+    let(:vsplit_data) { file.slice(2624..-1) }
 
     it "specifies correct chunk length" do
       expect(header[0]).to eq 3996

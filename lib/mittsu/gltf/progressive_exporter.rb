@@ -91,8 +91,8 @@ module Mittsu
       y = mesh.vertex_splits.map { |vsplit| vsplit.displacement.y }.minmax
       z = mesh.vertex_splits.map { |vsplit| vsplit.displacement.z }.minmax
       [
-        [x[0], y[0], z[0]],
-        [x[1], y[1], z[1]]
+        [x[0].round(10), y[0].round(10), z[0].round(10)],
+        [x[1].round(10), y[1].round(10), z[1].round(10)]
       ]
     end
   end

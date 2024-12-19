@@ -164,8 +164,8 @@ module Mittsu
         component_type: :float,
         count: max_vertex_index + 1,
         type: "VEC3",
-        min: mesh.geometry.bounding_box.min.elements,
-        max: mesh.geometry.bounding_box.max.elements
+        min: mesh.geometry.bounding_box.min.elements.map { |x| x.round 10 },
+        max: mesh.geometry.bounding_box.max.elements.map { |x| x.round 10 }
       )
       # Encode and store in buffers
       @buffers << ((mode == :ascii) ? {
