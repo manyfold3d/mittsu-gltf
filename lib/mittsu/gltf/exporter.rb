@@ -120,12 +120,12 @@ module Mittsu
     end
 
     def add_mesh(mesh, mode:)
-      max_vertex_index = mesh.geometry.vertices.count
+      max_vertex_index = mesh.geometry.vertices.count - 1
 
       # Pack faces into an array
       face_buffer_length, face_buffer_offset = pack_into_buffer(
         elements: mesh.geometry.faces.map { |x| [x.a, x.b, x.c] },
-        format: (max_vertex_index >= (2**16)) ? "L<*" : "S<*"
+        format: (max_vertex_index > (2**16)) ? "L<*" : "S<*"
       )
       # Pack vertices in as floats
       vertex_buffer_length, vertex_buffer_offset = pack_into_buffer(
@@ -141,11 +141,11 @@ module Mittsu
           length: face_buffer_length,
           target: :element_array_buffer
         ),
-        component_type: (max_vertex_index >= (2**16)) ? :unsigned_int : :unsigned_short,
+        component_type: (max_vertex_index > (2**16)) ? :unsigned_int : :unsigned_short,
         count: mesh.geometry.faces.count * 3,
         type: "SCALAR",
         min: 0,
-        max: mesh.geometry.vertices.count - 1
+        max: max_vertex_index
       )
 
       # Add bufferView and accessor for vertices
@@ -158,7 +158,7 @@ module Mittsu
           target: :array_buffer
         ),
         component_type: :float,
-        count: mesh.geometry.vertices.count,
+        count: max_vertex_index + 1,
         type: "VEC3",
         min: mesh.geometry.bounding_box.min.elements,
         max: mesh.geometry.bounding_box.max.elements
