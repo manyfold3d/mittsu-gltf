@@ -149,13 +149,13 @@ module Mittsu
         max: mesh.geometry.bounding_box.max.elements
       )
       # Encode and store in buffers
+      @binary_buffer = data
       @buffers << ((mode == :ascii) ? {
-        uri: "data:application/octet-stream;base64," + Base64.strict_encode64(data),
-        byteLength: data.length
+        uri: "data:application/octet-stream;base64," + Base64.strict_encode64(@binary_buffer),
+        byteLength: @binary_buffer.length
       } : {
-        byteLength: data.length
+        byteLength: @binary_buffer.length
       })
-      @binary_buffer = data if mode == :binary
       # Add mesh
       mesh_index = @meshes.count
       @meshes << {
