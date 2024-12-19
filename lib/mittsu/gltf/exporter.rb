@@ -128,6 +128,16 @@ module Mittsu
       @binary_buffer = faces.flatten.pack(pack_string)
       face_buffer_offset = 0
       face_buffer_length = @binary_buffer.length
+
+      # Add padding to get to integer multiple of float size
+      padding = padding_required(@binary_buffer, stride: 4)
+      @binary_buffer += Array.new(padding, 0).pack("C*")
+      # Pack vertices in as floats
+      vertex_buffer_offset = @binary_buffer.length
+      vertices = mesh.geometry.vertices.map(&:elements)
+      @binary_buffer += vertices.flatten.pack("f*")
+      vertex_buffer_length = @binary_buffer.length - vertex_buffer_offset
+
       # Add bufferView and accessor for faces
       face_accessor_index = add_accessor(
         buffer_view: add_buffer_view(
@@ -142,14 +152,7 @@ module Mittsu
         min: 0,
         max: mesh.geometry.vertices.count - 1
       )
-      # Add padding to get to integer multiple of float size
-      padding = padding_required(@binary_buffer, stride: 4)
-      @binary_buffer += Array.new(padding, 0).pack("C*")
-      # Pack vertices in as floats
-      vertex_buffer_offset = @binary_buffer.length
-      vertices = mesh.geometry.vertices.map(&:elements)
-      @binary_buffer += vertices.flatten.pack("f*")
-      vertex_buffer_length = @binary_buffer.length - vertex_buffer_offset
+
       # Add bufferView and accessor for vertices
       mesh.geometry.compute_bounding_box
       vertex_accessor_index = add_accessor(
