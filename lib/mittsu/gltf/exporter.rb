@@ -107,6 +107,18 @@ module Mittsu
       file.write(Array.new(pad, (type == :json) ? 32 : 0).pack("C*")) # Space characters for JSON, null otherwise
     end
 
+    def pack_into_buffer(elements:, format:, pad: true)
+      offset = @binary_buffer.length
+      data = elements.flatten.pack(format).chars
+      length = data.length
+      if pad
+        padding = padding_required(data, stride: 4)
+        data += Array.new(padding, 0).pack("C*").chars
+      end
+      @binary_buffer += data
+      [length, offset]
+    end
+
     def add_mesh(mesh, mode:)
       max_vertex_index = mesh.geometry.vertices.count
 
@@ -114,12 +126,14 @@ module Mittsu
       pack_string = (max_vertex_index >= (2**16)) ? "L<*" : "S<*"
       faces = mesh.geometry.faces.map { |x| [x.a, x.b, x.c] }
       @binary_buffer = faces.flatten.pack(pack_string)
+      face_buffer_offset = 0
+      face_buffer_length = @binary_buffer.length
       # Add bufferView and accessor for faces
       face_accessor_index = add_accessor(
         buffer_view: add_buffer_view(
           buffer: @buffers.count,
-          offset: 0,
-          length: @binary_buffer.length,
+          offset: face_buffer_offset,
+          length: face_buffer_length,
           target: :element_array_buffer
         ),
         component_type: (max_vertex_index >= (2**16)) ? :unsigned_int : :unsigned_short,
@@ -132,16 +146,17 @@ module Mittsu
       padding = padding_required(@binary_buffer, stride: 4)
       @binary_buffer += Array.new(padding, 0).pack("C*")
       # Pack vertices in as floats
-      offset = @binary_buffer.length
+      vertex_buffer_offset = @binary_buffer.length
       vertices = mesh.geometry.vertices.map(&:elements)
       @binary_buffer += vertices.flatten.pack("f*")
+      vertex_buffer_length = @binary_buffer.length - vertex_buffer_offset
       # Add bufferView and accessor for vertices
       mesh.geometry.compute_bounding_box
       vertex_accessor_index = add_accessor(
         buffer_view: add_buffer_view(
           buffer: @buffers.count,
-          offset: offset,
-          length: @binary_buffer.length - offset,
+          offset: vertex_buffer_offset,
+          length: vertex_buffer_length,
           target: :array_buffer
         ),
         component_type: :float,
