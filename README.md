@@ -37,6 +37,13 @@ You can also write binary files for simple single-mesh models:
 exporter.export(object, "output.glb", mode: :binary)
 ```
 
+## Progressive Meshes
+
+The binary GLTF exporter can create "progressive meshes" using the proposed
+[`MANYFOLD_mesh_progressive` GLTF extension](https://github.com/manyfold3d/glTF/tree/MANYFOLD_mesh_progressive/extensions/2.0/Vendor/MANYFOLD_mesh_progressive#readme). If you want to create these sort of meshes, you will need to install
+the `mittsu-mesh_analysis` gem and create a `Mittsu::MeshAnalysis::ProgressiveMesh` object, which you can
+then pass to `export` in the same way as above.
+
 ## About
 
 This code was originally written for [Manyfold](https://manyfold.app), supported by funding from [NLNet](https://nlnet.nl) and [NGI Zero](https://ngi.eu/ngi-projects/ngi-zero/).
