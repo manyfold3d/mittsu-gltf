@@ -42,7 +42,7 @@ module Mittsu
       @meshes = []
       @buffer_views = []
       @accessors = []
-      @binary_buffer = nil
+      @binary_buffer = []
     end
 
     def export(object, filename, mode: :ascii)
@@ -113,13 +113,13 @@ module Mittsu
       # Pack faces into an array
       pack_string = (max_vertex_index >= (2**16)) ? "L<*" : "S<*"
       faces = mesh.geometry.faces.map { |x| [x.a, x.b, x.c] }
-      data = faces.flatten.pack(pack_string)
+      @binary_buffer = faces.flatten.pack(pack_string)
       # Add bufferView and accessor for faces
       face_accessor_index = add_accessor(
         buffer_view: add_buffer_view(
           buffer: @buffers.count,
           offset: 0,
-          length: data.length,
+          length: @binary_buffer.length,
           target: :element_array_buffer
         ),
         component_type: (max_vertex_index >= (2**16)) ? :unsigned_int : :unsigned_short,
@@ -129,19 +129,19 @@ module Mittsu
         max: mesh.geometry.vertices.count - 1
       )
       # Add padding to get to integer multiple of float size
-      padding = padding_required(data, stride: 4)
-      data += Array.new(padding, 0).pack("C*")
+      padding = padding_required(@binary_buffer, stride: 4)
+      @binary_buffer += Array.new(padding, 0).pack("C*")
       # Pack vertices in as floats
-      offset = data.length
+      offset = @binary_buffer.length
       vertices = mesh.geometry.vertices.map(&:elements)
-      data += vertices.flatten.pack("f*")
+      @binary_buffer += vertices.flatten.pack("f*")
       # Add bufferView and accessor for vertices
       mesh.geometry.compute_bounding_box
       vertex_accessor_index = add_accessor(
         buffer_view: add_buffer_view(
           buffer: @buffers.count,
           offset: offset,
-          length: data.length - offset,
+          length: @binary_buffer.length - offset,
           target: :array_buffer
         ),
         component_type: :float,
@@ -151,7 +151,6 @@ module Mittsu
         max: mesh.geometry.bounding_box.max.elements
       )
       # Encode and store in buffers
-      @binary_buffer = data
       @buffers << ((mode == :ascii) ? {
         uri: "data:application/octet-stream;base64," + Base64.strict_encode64(@binary_buffer),
         byteLength: @binary_buffer.length
