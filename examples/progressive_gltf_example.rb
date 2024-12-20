@@ -8,7 +8,7 @@ rescue LoadError
 end
 
 loader = Mittsu::OBJLoader.new
-object = loader.load(File.expand_path("./mittsu.obj", File.dirname(__FILE__)))
+object = loader.load(File.expand_path("./gltf.obj", File.dirname(__FILE__)))
 object.traverse do |x|
   if x.is_a? Mittsu::Mesh
     object = x
@@ -20,4 +20,4 @@ progressive = Mittsu::MeshAnalysis::ProgressiveMesh.new(object.geometry, object.
 progressive.progressify ratio: 0.75
 
 exporter = Mittsu::GLTFExporter.new
-exporter.export(progressive, File.expand_path("./progressive-export.glb", File.dirname(__FILE__)), mode: :binary)
+exporter.export(progressive, File.expand_path("./progressive.glb", File.dirname(__FILE__)), mode: :binary)
